@@ -10,7 +10,7 @@ Follow the code style provided by flake8. As described, the style from flake8 fo
 
 Thoroughly follow a **Test-Driven Development (TDD)** approach when writing code. Ensure your code is written as described:
 
-1. **Red Phase**: Write the function stubs. Write meaningful tests and assure they are failing as expected. Full coverage is less important that ensuring the critical path is tested, but at least 80% coverage is desired. Create a git commit for this phase with the prefix from conventional commits "test:".
+1. **Red Phase**: Write the function stubs. Write meaningful tests and assure they are failing as expected. Full coverage is less important that ensuring the critical path is tested, but at least 80% coverage is desired.
 2. **Green Phase**: Implement the functions. Ensure that the tests are passing and that the code is working as expected.
 3. **Refactor Phase**: Improve the architecture, improve algorithms and code performance, make sure the code written is clean, easy to understand and maintain by a human, that the project structure and styling is maintained. Re-run the tests and ensure they are still passing.
 
