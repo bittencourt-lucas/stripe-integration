@@ -35,8 +35,11 @@ Client → FastAPI (auth + rate limiting) → Stripe API
 | Customer management (create, retrieve) | ✓ |
 | Refunds | ✓ |
 | Idempotency key pass-through on all write endpoints | ✓ |
-| Tests (63 passing) | ✓ |
-| Webhook signature verification | coming soon |
+| Webhook handler (`POST /webhooks`) | ✓ |
+| Stripe signature + replay-attack verification | ✓ |
+| Webhook idempotency guard (Redis dedup) | ✓ |
+| Event routing (payment_intent.succeeded/failed/canceled) | ✓ |
+| Tests (168 passing) | ✓ |
 | Rate limiting, auth, security layer | coming soon |
 | Database models and migrations (Alembic) | coming soon |
 

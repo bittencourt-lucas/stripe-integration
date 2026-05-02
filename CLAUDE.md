@@ -51,7 +51,8 @@ src/stripe_integration/
     ├── health.py        # GET /health
     ├── payments.py      # POST /payments, /payments/{id}/confirm, /payments/{id}/cancel
     ├── customers.py     # POST /customers, GET /customers/{id}
-    └── refunds.py       # POST /refunds
+    ├── refunds.py       # POST /refunds
+    └── webhooks.py      # POST /webhooks — signature verify, Redis dedup, event routing
 
 tests/                   # pytest suite (asyncio_mode = auto, httpx AsyncClient)
 ```
@@ -66,6 +67,7 @@ Runtime dependencies: `fastapi`, `uvicorn[standard]`, `sqlalchemy[asyncio]`, `al
 - **Logging** uses structlog JSON output; the PII scrubber in `logging_config.py` redacts Stripe keys, webhook secrets, and PAN-length digit strings from all log entries.
 - **Errors** never leak internal detail to callers. `unhandled_exception_handler` returns a generic 500.
 - **Tests** must not call real Stripe APIs. Use `unittest.mock.patch` or `pytest-mock` to stub `stripe_call` or `get_stripe_client`.
+- **Webhook endpoint** reads raw bytes via `request.body()` and passes them to `stripe.Webhook.construct_event` (run in `asyncio.to_thread`). The `tolerance=300` parameter handles the replay-attack guard. Redis dedup uses key `webhook:event:{event_id}` with a 24-hour TTL. Patch `stripe.Webhook.construct_event` directly in tests (not via dotted path through the module) since the stub may not import stripe.
 
 ## Phase process
 
@@ -85,7 +87,7 @@ At the **end of every phase**:
 | 2 | Project structure & config | complete |
 | 3 | Core API layer (app factory, health, exceptions, logging) | complete |
 | 4 | Stripe integration (PaymentIntents, Customers, Refunds) | complete |
-| 5 | Webhook handler | pending |
+| 5 | Webhook handler | complete |
 | 6 | Security layer (auth, rate limiting, CORS, request size) | pending |
 | 7 | Database & persistence (SQLAlchemy models, Alembic) | pending |
 | 8 | Testing & verification | pending |
