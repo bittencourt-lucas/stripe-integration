@@ -28,11 +28,17 @@ Client → FastAPI (auth + rate limiting) → Stripe API
 | Dependency setup (Poetry) | ✓ |
 | Config management (`pydantic-settings`, `.env`) | ✓ |
 | Docker + docker-compose (app, postgres, redis) | ✓ |
-| FastAPI app, endpoints, Stripe integration | coming soon |
+| FastAPI app factory, lifespan, health endpoint | ✓ |
+| Structured logging with PII scrubber | ✓ |
+| Global exception handlers (no internal leakage) | ✓ |
+| Payment Intents (create, confirm, cancel) | ✓ |
+| Customer management (create, retrieve) | ✓ |
+| Refunds | ✓ |
+| Idempotency key pass-through on all write endpoints | ✓ |
+| Tests (63 passing) | ✓ |
 | Webhook signature verification | coming soon |
 | Rate limiting, auth, security layer | coming soon |
 | Database models and migrations (Alembic) | coming soon |
-| Tests | coming soon |
 
 ## Setup
 

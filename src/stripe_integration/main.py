@@ -14,7 +14,7 @@ from stripe_integration.exceptions import (
     unhandled_exception_handler,
 )
 from stripe_integration.logging_config import configure_logging
-from stripe_integration.routers import health
+from stripe_integration.routers import customers, health, payments, refunds
 
 logger = structlog.get_logger()
 
@@ -47,5 +47,8 @@ def create_app() -> FastAPI:
     app.add_exception_handler(Exception, unhandled_exception_handler)
 
     app.include_router(health.router)
+    app.include_router(payments.router)
+    app.include_router(customers.router)
+    app.include_router(refunds.router)
 
     return app
