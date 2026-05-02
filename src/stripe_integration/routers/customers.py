@@ -2,13 +2,19 @@ from typing import Annotated
 
 import stripe
 import structlog
-from fastapi import APIRouter, Depends, Header, status
+from fastapi import APIRouter, Depends, Header, Request, status
 
+from stripe_integration.auth import verify_api_key
+from stripe_integration.limiter import limiter
 from stripe_integration.schemas import CreateCustomerRequest, CustomerResponse
 from stripe_integration.stripe_client import get_stripe_client, stripe_call
 
 logger = structlog.get_logger()
-router = APIRouter(prefix="/customers", tags=["customers"])
+router = APIRouter(
+    prefix="/customers",
+    tags=["customers"],
+    dependencies=[Depends(verify_api_key)],
+)
 
 
 def _serialize_customer(c: stripe.Customer) -> CustomerResponse:
@@ -22,7 +28,9 @@ def _serialize_customer(c: stripe.Customer) -> CustomerResponse:
 
 
 @router.post("", response_model=CustomerResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 async def create_customer(
+    request: Request,
     body: CreateCustomerRequest,
     idempotency_key: Annotated[str | None, Header()] = None,
     client: stripe.StripeClient = Depends(get_stripe_client),
@@ -43,7 +51,9 @@ async def create_customer(
 
 
 @router.get("/{customer_id}", response_model=CustomerResponse)
+@limiter.limit("30/minute")
 async def get_customer(
+    request: Request,
     customer_id: str,
     client: stripe.StripeClient = Depends(get_stripe_client),
 ) -> CustomerResponse:

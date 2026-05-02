@@ -2,8 +2,10 @@ from typing import Annotated
 
 import stripe
 import structlog
-from fastapi import APIRouter, Depends, Header, status
+from fastapi import APIRouter, Depends, Header, Request, status
 
+from stripe_integration.auth import verify_api_key
+from stripe_integration.limiter import limiter
 from stripe_integration.schemas import (
     ConfirmPaymentIntentRequest,
     CreatePaymentIntentRequest,
@@ -12,7 +14,11 @@ from stripe_integration.schemas import (
 from stripe_integration.stripe_client import get_stripe_client, stripe_call
 
 logger = structlog.get_logger()
-router = APIRouter(prefix="/payments", tags=["payments"])
+router = APIRouter(
+    prefix="/payments",
+    tags=["payments"],
+    dependencies=[Depends(verify_api_key)],
+)
 
 
 def _serialize_pi(pi: stripe.PaymentIntent) -> PaymentIntentResponse:
@@ -31,7 +37,9 @@ def _serialize_pi(pi: stripe.PaymentIntent) -> PaymentIntentResponse:
 
 
 @router.post("", response_model=PaymentIntentResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 async def create_payment_intent(
+    request: Request,
     body: CreatePaymentIntentRequest,
     idempotency_key: Annotated[str | None, Header()] = None,
     client: stripe.StripeClient = Depends(get_stripe_client),
@@ -61,7 +69,9 @@ async def create_payment_intent(
 
 
 @router.post("/{payment_intent_id}/confirm", response_model=PaymentIntentResponse)
+@limiter.limit("10/minute")
 async def confirm_payment_intent(
+    request: Request,
     payment_intent_id: str,
     body: ConfirmPaymentIntentRequest,
     idempotency_key: Annotated[str | None, Header()] = None,
@@ -83,7 +93,9 @@ async def confirm_payment_intent(
 
 
 @router.post("/{payment_intent_id}/cancel", response_model=PaymentIntentResponse)
+@limiter.limit("10/minute")
 async def cancel_payment_intent(
+    request: Request,
     payment_intent_id: str,
     client: stripe.StripeClient = Depends(get_stripe_client),
 ) -> PaymentIntentResponse:

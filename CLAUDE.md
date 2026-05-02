@@ -47,8 +47,10 @@ src/stripe_integration/
 ├── exceptions.py        # AppError hierarchy + FastAPI exception handlers
 ├── logging_config.py    # structlog JSON renderer with PII scrubber
 ├── stripe_client.py     # stripe.StripeClient dependency; stripe_call() async wrapper; error mapper
+├── auth.py              # verify_api_key FastAPI dependency (HTTPBearer)
+├── limiter.py           # slowapi Limiter instance shared across routers
 └── routers/
-    ├── health.py        # GET /health
+    ├── health.py        # GET /health (no auth required)
     ├── payments.py      # POST /payments, /payments/{id}/confirm, /payments/{id}/cancel
     ├── customers.py     # POST /customers, GET /customers/{id}
     ├── refunds.py       # POST /refunds
@@ -68,6 +70,10 @@ Runtime dependencies: `fastapi`, `uvicorn[standard]`, `sqlalchemy[asyncio]`, `al
 - **Errors** never leak internal detail to callers. `unhandled_exception_handler` returns a generic 500.
 - **Tests** must not call real Stripe APIs. Use `unittest.mock.patch` or `pytest-mock` to stub `stripe_call` or `get_stripe_client`.
 - **Webhook endpoint** reads raw bytes via `request.body()` and passes them to `stripe.Webhook.construct_event` (run in `asyncio.to_thread`). The `tolerance=300` parameter handles the replay-attack guard. Redis dedup uses key `webhook:event:{event_id}` with a 24-hour TTL. Patch `stripe.Webhook.construct_event` directly in tests (not via dotted path through the module) since the stub may not import stripe.
+- **Auth** uses `HTTPBearer` scheme. `verify_api_key` in `auth.py` compares `credentials.credentials` against `settings.api_key`. Applied via `dependencies=[Depends(verify_api_key)]` at the router level for payments, customers, and refunds. Health and webhooks are exempt.
+- **Rate limiting** uses `slowapi`. The `limiter` instance is defined in `limiter.py` and shared across routers. Limits: 10/minute for write endpoints, 30/minute for reads. Rate-limited handlers must include `request: Request` as their first parameter. `app.state.limiter = limiter` is set in `create_app()`.
+- **CORS** is enforced via `CORSMiddleware` with `settings.allowed_origins`. An empty list blocks all cross-origin requests.
+- **Request size** is limited to 1 MB via `_RequestSizeLimitMiddleware` in `main.py`. Checks `Content-Length` header and returns 413 if exceeded.
 
 ## Phase process
 

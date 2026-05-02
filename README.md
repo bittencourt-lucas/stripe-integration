@@ -39,8 +39,11 @@ Client → FastAPI (auth + rate limiting) → Stripe API
 | Stripe signature + replay-attack verification | ✓ |
 | Webhook idempotency guard (Redis dedup) | ✓ |
 | Event routing (payment_intent.succeeded/failed/canceled) | ✓ |
-| Tests (168 passing) | ✓ |
-| Rate limiting, auth, security layer | coming soon |
+| Bearer token auth (`Authorization: Bearer <API_KEY>`) | ✓ |
+| Rate limiting (slowapi, 10/min writes, 30/min reads) | ✓ |
+| CORS lockdown (explicit origin allowlist) | ✓ |
+| Request size limit (1 MB) | ✓ |
+| Tests (181 passing) | ✓ |
 | Database models and migrations (Alembic) | coming soon |
 
 ## Setup

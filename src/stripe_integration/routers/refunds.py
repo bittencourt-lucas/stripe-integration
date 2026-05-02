@@ -2,13 +2,19 @@ from typing import Annotated
 
 import stripe
 import structlog
-from fastapi import APIRouter, Depends, Header, status
+from fastapi import APIRouter, Depends, Header, Request, status
 
+from stripe_integration.auth import verify_api_key
+from stripe_integration.limiter import limiter
 from stripe_integration.schemas import CreateRefundRequest, RefundResponse
 from stripe_integration.stripe_client import get_stripe_client, stripe_call
 
 logger = structlog.get_logger()
-router = APIRouter(prefix="/refunds", tags=["refunds"])
+router = APIRouter(
+    prefix="/refunds",
+    tags=["refunds"],
+    dependencies=[Depends(verify_api_key)],
+)
 
 
 def _serialize_refund(r: stripe.Refund) -> RefundResponse:
@@ -27,7 +33,9 @@ def _serialize_refund(r: stripe.Refund) -> RefundResponse:
 
 
 @router.post("", response_model=RefundResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 async def create_refund(
+    request: Request,
     body: CreateRefundRequest,
     idempotency_key: Annotated[str | None, Header()] = None,
     client: stripe.StripeClient = Depends(get_stripe_client),
