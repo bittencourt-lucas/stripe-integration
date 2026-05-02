@@ -42,3 +42,21 @@ async def test_lifespan_configures_stripe_api_version(env_vars):
     app = create_app()
     async with app.router.lifespan_context(app):
         assert stripe.api_version == "2024-11-20.acacia"
+
+
+def test_payment_routes_registered(app):
+    paths = [r.path for r in app.routes]
+    assert "/payments" in paths
+    assert "/payments/{payment_intent_id}/confirm" in paths
+    assert "/payments/{payment_intent_id}/cancel" in paths
+
+
+def test_customer_routes_registered(app):
+    paths = [r.path for r in app.routes]
+    assert "/customers" in paths
+    assert "/customers/{customer_id}" in paths
+
+
+def test_refund_routes_registered(app):
+    paths = [r.path for r in app.routes]
+    assert "/refunds" in paths

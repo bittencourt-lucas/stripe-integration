@@ -44,6 +44,6 @@ async def create_refund(
     if idempotency_key:
         kwargs["options"] = {"idempotency_key": idempotency_key}
 
-    refund = await stripe_call(client.refunds.create, **kwargs)
+    refund = await stripe_call(client.v1.refunds.create, **kwargs)
     logger.info("refund_created", refund_id=refund.id, payment_intent_id=body.payment_intent_id)
     return _serialize_refund(refund)

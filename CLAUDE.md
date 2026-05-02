@@ -2,6 +2,18 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Code Style
+
+Follow the code style provided by flake8. As described, the style from flake8 follows **PyFlakes project**, PEP-0008 inspired style checks provided by the PyCodeStyle project, and **McCabe complexity checking** provided by the McCabe project
+
+## Development Approach
+
+Thoroughly follow a **Test-Driven Development (TDD)** approach when writing code. Ensure your code is written as described:
+
+1. **Red Phase**: Write the function stubs. Write meaningful tests and assure they are failing as expected. Full coverage is less important that ensuring the critical path is tested, but at least 80% coverage is desired. Create a git commit for this phase with the prefix from conventional commits "test:".
+2. **Green Phase**: Implement the functions. Ensure that the tests are passing and that the code is working as expected.
+3. **Refactor Phase**: Improve the architecture, improve algorithms and code performance, make sure the code written is clean, easy to understand and maintain by a human, that the project structure and styling is maintained. Re-run the tests and ensure they are still passing.
+
 ## Project
 
 A Python microservice for Stripe payments, webhooks, and customer management. Built with **FastAPI**, **PostgreSQL**, and **Redis**. Managed with **Poetry** (Python 3.12+, Stripe SDK v15.x).
@@ -62,6 +74,8 @@ At the **end of every phase**:
 1. **Update `README.md`** — reflect newly implemented features; move items from "coming soon" to the completed table.
 2. **Update `CLAUDE.md`** — update the Architecture layout, Commands, or Key conventions sections if anything changed (new modules, new commands, new patterns). Skip if nothing changed.
 3. **Mark the phase complete** in `task_plan.md` and log actions in `progress.md`.
+4. Run all tests and ensure they are all passing.
+5. Run flake8 and ensure it's passing properly, if not, correct any mistakes.
 
 ## Implementation status
 

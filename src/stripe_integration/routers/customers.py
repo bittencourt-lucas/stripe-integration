@@ -37,7 +37,7 @@ async def create_customer(
     if idempotency_key:
         kwargs["options"] = {"idempotency_key": idempotency_key}
 
-    customer = await stripe_call(client.customers.create, **kwargs)
+    customer = await stripe_call(client.v1.customers.create, **kwargs)
     logger.info("customer_created", customer_id=customer.id)
     return _serialize_customer(customer)
 
@@ -47,5 +47,5 @@ async def get_customer(
     customer_id: str,
     client: stripe.StripeClient = Depends(get_stripe_client),
 ) -> CustomerResponse:
-    customer = await stripe_call(client.customers.retrieve, customer_id)
+    customer = await stripe_call(client.v1.customers.retrieve, customer_id)
     return _serialize_customer(customer)

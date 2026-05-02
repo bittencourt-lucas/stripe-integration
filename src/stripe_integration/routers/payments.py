@@ -50,7 +50,7 @@ async def create_payment_intent(
     if idempotency_key:
         kwargs["options"] = {"idempotency_key": idempotency_key}
 
-    pi = await stripe_call(client.payment_intents.create, **kwargs)
+    pi = await stripe_call(client.v1.payment_intents.create, **kwargs)
     logger.info(
         "payment_intent_created",
         payment_intent_id=pi.id,
@@ -77,7 +77,7 @@ async def confirm_payment_intent(
     if idempotency_key:
         kwargs["options"] = {"idempotency_key": idempotency_key}
 
-    pi = await stripe_call(client.payment_intents.confirm, payment_intent_id, **kwargs)
+    pi = await stripe_call(client.v1.payment_intents.confirm, payment_intent_id, **kwargs)
     logger.info("payment_intent_confirmed", payment_intent_id=pi.id, status=pi.status)
     return _serialize_pi(pi)
 
@@ -87,6 +87,6 @@ async def cancel_payment_intent(
     payment_intent_id: str,
     client: stripe.StripeClient = Depends(get_stripe_client),
 ) -> PaymentIntentResponse:
-    pi = await stripe_call(client.payment_intents.cancel, payment_intent_id)
+    pi = await stripe_call(client.v1.payment_intents.cancel, payment_intent_id)
     logger.info("payment_intent_cancelled", payment_intent_id=pi.id)
     return _serialize_pi(pi)
