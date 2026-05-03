@@ -37,14 +37,16 @@ Client → FastAPI (auth + rate limiting) → Stripe API
 | Idempotency key pass-through on all write endpoints | ✓ |
 | Webhook handler (`POST /webhooks`) | ✓ |
 | Stripe signature + replay-attack verification | ✓ |
-| Webhook idempotency guard (Redis dedup) | ✓ |
+| Webhook idempotency guard (Redis dedup + DB) | ✓ |
 | Event routing (payment_intent.succeeded/failed/canceled) | ✓ |
 | Bearer token auth (`Authorization: Bearer <API_KEY>`) | ✓ |
 | Rate limiting (slowapi, 10/min writes, 30/min reads) | ✓ |
 | CORS lockdown (explicit origin allowlist) | ✓ |
 | Request size limit (1 MB) | ✓ |
-| Tests (181 passing) | ✓ |
-| Database models and migrations (Alembic) | coming soon |
+| SQLAlchemy async models (PaymentRecord, WebhookEvent, IdempotencyKey) | ✓ |
+| DB-level idempotency dedup (24-hour TTL, keyed on header + path) | ✓ |
+| Alembic async migrations | ✓ |
+| Tests (195 passing) | ✓ |
 
 ## Setup
 
@@ -95,6 +97,9 @@ poetry run flake8
 
 # Test
 poetry run pytest
+
+# Run Alembic migrations
+poetry run alembic upgrade head
 
 # Install git hooks (runs flake8 + pytest before every commit)
 poetry run pre-commit install

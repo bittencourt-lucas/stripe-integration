@@ -7,9 +7,12 @@ import stripe
 import structlog
 from fastapi import APIRouter, Depends, Header, Request, status
 from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from stripe_integration.config import get_settings
+from stripe_integration.database import get_db
 from stripe_integration.exceptions import AppError
+from stripe_integration.models import WebhookEvent
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
@@ -65,11 +68,26 @@ _HANDLERS: dict[str, Any] = {
 }
 
 
+async def _persist_webhook_event(db: AsyncSession, event_id: str, event_type: str) -> None:
+    try:
+        record = WebhookEvent(
+            stripe_event_id=event_id,
+            event_type=event_type,
+            payload={"id": event_id, "type": event_type},
+        )
+        db.add(record)
+        await db.commit()
+    except Exception:
+        logger.warning("webhook_event_persist_failed", event_id=event_id)
+        await db.rollback()
+
+
 @router.post("", status_code=status.HTTP_200_OK)
 async def stripe_webhook(
     request: Request,
     stripe_signature: Annotated[str | None, Header()] = None,
     redis: aioredis.Redis = Depends(get_redis),
+    db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
     if not stripe_signature:
         raise AppError("Missing Stripe-Signature header", 400)
@@ -105,6 +123,7 @@ async def stripe_webhook(
     else:
         logger.debug("webhook_event_unhandled", event_type=event_type)
 
+    await _persist_webhook_event(db, event_id, event_type)
     await _mark_processed(redis, event_id)
     logger.info("webhook_processed", event_id=event_id, event_type=event_type)
     return JSONResponse(content={"received": True})

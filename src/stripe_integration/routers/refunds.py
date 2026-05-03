@@ -3,8 +3,14 @@ from typing import Annotated
 import stripe
 import structlog
 from fastapi import APIRouter, Depends, Header, Request, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from stripe_integration.auth import verify_api_key
+from stripe_integration.database import (
+    get_cached_idempotency_response,
+    get_db,
+    save_idempotency_response,
+)
 from stripe_integration.limiter import limiter
 from stripe_integration.schemas import CreateRefundRequest, RefundResponse
 from stripe_integration.stripe_client import get_stripe_client, stripe_call
@@ -39,7 +45,13 @@ async def create_refund(
     body: CreateRefundRequest,
     idempotency_key: Annotated[str | None, Header()] = None,
     client: stripe.StripeClient = Depends(get_stripe_client),
+    db: AsyncSession = Depends(get_db),
 ) -> RefundResponse:
+    if idempotency_key:
+        cached = await get_cached_idempotency_response(db, idempotency_key, request.url.path)
+        if cached:
+            return RefundResponse(**cached["body"])
+
     params: dict = {"payment_intent": body.payment_intent_id}
     if body.amount is not None:
         params["amount"] = body.amount
@@ -54,4 +66,11 @@ async def create_refund(
 
     refund = await stripe_call(client.v1.refunds.create, **kwargs)
     logger.info("refund_created", refund_id=refund.id, payment_intent_id=body.payment_intent_id)
-    return _serialize_refund(refund)
+    response = _serialize_refund(refund)
+
+    if idempotency_key:
+        await save_idempotency_response(
+            db, idempotency_key, request.url.path, status.HTTP_201_CREATED, response.model_dump()
+        )
+
+    return response

@@ -49,12 +49,20 @@ src/stripe_integration/
 ├── stripe_client.py     # stripe.StripeClient dependency; stripe_call() async wrapper; error mapper
 ├── auth.py              # verify_api_key FastAPI dependency (HTTPBearer)
 ├── limiter.py           # slowapi Limiter instance shared across routers
+├── models.py            # SQLAlchemy ORM models (PaymentRecord, WebhookEvent, IdempotencyKey)
+├── database.py          # async engine + get_db dependency + idempotency key helpers
 └── routers/
     ├── health.py        # GET /health (no auth required)
     ├── payments.py      # POST /payments, /payments/{id}/confirm, /payments/{id}/cancel
     ├── customers.py     # POST /customers, GET /customers/{id}
     ├── refunds.py       # POST /refunds
     └── webhooks.py      # POST /webhooks — signature verify, Redis dedup, event routing
+
+alembic/                 # Alembic migration environment (async)
+├── env.py               # reads DATABASE_URL from env; uses asyncio.run for online mode
+├── script.py.mako       # migration file template
+└── versions/
+    └── 001_initial.py   # creates payment_records, webhook_events, idempotency_keys
 
 tests/                   # pytest suite (asyncio_mode = auto, httpx AsyncClient)
 ```
@@ -74,6 +82,12 @@ Runtime dependencies: `fastapi`, `uvicorn[standard]`, `sqlalchemy[asyncio]`, `al
 - **Rate limiting** uses `slowapi`. The `limiter` instance is defined in `limiter.py` and shared across routers. Limits: 10/minute for write endpoints, 30/minute for reads. Rate-limited handlers must include `request: Request` as their first parameter. `app.state.limiter = limiter` is set in `create_app()`.
 - **CORS** is enforced via `CORSMiddleware` with `settings.allowed_origins`. An empty list blocks all cross-origin requests.
 - **Request size** is limited to 1 MB via `_RequestSizeLimitMiddleware` in `main.py`. Checks `Content-Length` header and returns 413 if exceeded.
+- **Database** uses SQLAlchemy async engine. `get_db()` in `database.py` is the FastAPI dependency yielding an `AsyncSession`. All routers except health inject it via `Depends(get_db)`.
+- **DB idempotency** complements the Stripe-level idempotency key forwarding. `get_cached_idempotency_response()` checks the `idempotency_keys` table before calling Stripe; `save_idempotency_response()` stores the response after. TTL is 24 hours, keyed on `(Idempotency-Key header, request path)`.
+- **PaymentRecord** is upserted (`_upsert_payment_record`) on every create/confirm/cancel in `payments.py`, tracking Stripe status changes.
+- **WebhookEvent** is persisted to the DB after successful event handling (best-effort; DB failure is logged and swallowed so the webhook still returns 200).
+- **Migrations** run via `poetry run alembic upgrade head`. The async `env.py` reads `DATABASE_URL` from the environment.
+- **Tests** use `sqlite+aiosqlite:///:memory:` via an in-memory engine created in the `app` fixture. `get_db` is overridden lazily on first request so sync fixtures like `test_main.py` are unaffected. `db_session` fixture provides a direct `AsyncSession` for unit-testing DB helpers.
 
 ## Phase process
 
@@ -94,7 +108,7 @@ At the **end of every phase**:
 | 3 | Core API layer (app factory, health, exceptions, logging) | complete |
 | 4 | Stripe integration (PaymentIntents, Customers, Refunds) | complete |
 | 5 | Webhook handler | complete |
-| 6 | Security layer (auth, rate limiting, CORS, request size) | pending |
-| 7 | Database & persistence (SQLAlchemy models, Alembic) | pending |
+| 6 | Security layer (auth, rate limiting, CORS, request size) | complete |
+| 7 | Database & persistence (SQLAlchemy models, Alembic) | complete |
 | 8 | Testing & verification | pending |
 | 9 | Delivery & documentation | pending |
