@@ -110,5 +110,5 @@ At the **end of every phase**:
 | 5 | Webhook handler | complete |
 | 6 | Security layer (auth, rate limiting, CORS, request size) | complete |
 | 7 | Database & persistence (SQLAlchemy models, Alembic) | complete |
-| 8 | Testing & verification | pending |
-| 9 | Delivery & documentation | pending |
+| 8 | Testing & verification | complete |
+| 9 | Delivery & documentation | complete |
